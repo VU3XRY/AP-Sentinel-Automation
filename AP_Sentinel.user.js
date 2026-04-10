@@ -1,66 +1,42 @@
 // ==UserScript==
-// @name         AP Focus - Precision v5.2.2
-// @namespace    api.gcc.bangalore.arunava.dey
+// @name         AP Focus - Precision v5.2.2 (Portfolio Version)
+// @namespace    portfolio.arunava.dey
 // @version      5.2.2
-// @description  Automated Audit & Verification Engine for SharePoint/AX Workflows.
+// @description  Automated Audit & Verification Engine for ERP/SharePoint Workflows.
 // @author       Arunava Dey
-// @match        https://apigroupinc.sharepoint.com/*
+// @match        https://*.sharepoint.com/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
+    // Prevent execution in iframes or if already initialized
     if (window.self !== window.top || document.getElementById("ap-sentinel-v52")) return;
 
     const KNOWLEDGE_BASE = {
         entities: {
-            "1046": {
-                name: "USAF (Dawn)",
-                note: "Tax Alert! If AX Use Tax is $0 but PDF has Sales Tax, REASSIGN to Dawn."
+            "ENT_01": {
+                name: "Business Unit A",
+                note: "Tax Alert! If Use Tax is $0 but PDF has Sales Tax, REASSIGN to lead."
             },
-            "1025": {
-                name: "Viking (Jennifer)",
-                note: "Order-based. If grid is empty, toggle 'Ordered Quantity' in AX."
-            },
-            "1061": {
-                name: "AFPG (POC)",
-                note: "Receipt-based. If grid is empty, item is likely not received."
+            "ENT_02": {
+                name: "Business Unit B",
+                note: "Order-based. If grid is empty, toggle 'Ordered Quantity' in ERP."
             }
         },
-rules: [
-    { "q": "USAFP Scope", "a": "GCC ONLY processes PO/Job-related invoices. Non-PO invoices must be entered by POC." },
-    { "q": "USAFP PO Not Confirmed", "a": "If PO Approval Status is NOT CONFIRMED in AX → Reassign to POC. Do NOT reject in SharePoint." },
-    { "q": "USAFP Open Order", "a": "If PO Line Status is NOT RECEIVED (Open Order) → Reassign to POC. Do NOT process invoice." },
-    { "q": "USAFP Header Match", "a": "Vendor Name, Remit To Address, Invoice Number, Invoice Date, and Invoice Amount must match invoice PDF. Any mismatch → Reassign to POC." },
-    { "q": "USAFP Quantity Short", "a": "If AX quantity is LESS than invoice quantity → Reassign to POC." },
-    { "q": "USAFP Quantity Excess", "a": "If AX quantity is MORE than invoice quantity → Quantity may be amended in AX as per invoice." },
-    { "q": "USAFP Variance", "a": "≤ $5 → Post with 'Post variance to penny difference (40)'. > $5 → Reassign to POC (Dawn Maynard)." },
-    { "q": "USAFP Tax Handling", "a": "If tax doesn't match, enter amount from invoice into TAX field; if no tax collected, uncheck 'Vendor Collect Tax on entire invoice'." },
-    { "q": "VIKING Scope", "a": "GCC ONLY processes PO/Job-related invoices. Non-PO invoices must be entered by POC." },
-    { "q": "VIKING PO Not Confirmed", "a": "If PO Approval Status is NOT CONFIRMED in AX → Reassign to POC in SharePoint." },
-    { "q": "VIKING Quantity Short", "a": "If AX quantity is LESS than invoice quantity → Reassign to POC (POC)." },
-    { "q": "VIKING Quantity Excess", "a": "If AX quantity is MORE than invoice quantity → Quantity may be amended in AX as per invoice." },
-    { "q": "VIKING No Lines to Invoice", "a": "If 'No lines to invoice' → Change Default Quantity for Lines to Ordered Quantity. If unresolved → Reassign to POC." },
-    { "q": "VIKING Variance", "a": "≤ $5 → Update amount and check 'Post variance to penny difference (40)'. > $5 → Reassign to POC (POC)." },
-    { "q": "VIKING Status Update", "a": "After posting, update Invoice Status to 'Sch for Payment' in SharePoint. Reassigned invoices must be routed back to POC." },
-    { "q": "AFPG Scope", "a": "GCC ONLY processes PO/Job-related invoices. Non-PO invoices must be entered by POC ." },
-    { "q": "AFPG Receipts", "a": "If receipt grid is EMPTY → Invoice is NOT RECEIVED. Note 'PO line not received – Open order' and reassign to POC ." },
-    { "q": "AFPG Open Order", "a": "If PO Line Status is NOT RECEIVED → Reassign to POC (POC ) in SharePoint. Do NOT reject." },
-    { "q": "AFPG Quantity Short", "a": "If AX quantity is LESS than invoice quantity → Reassign to POC (POC )." },
-    { "q": "AFPG Quantity Excess", "a": "If AX quantity is MORE than invoice quantity → Quantity may be amended in AX." },
-    { "q": "AFPG Variance", "a": "≤ $5 → Post with 'Post variance to penny difference (40)'. > $5 → Reassign to POC (POC )." },
-    { "q": "AFPG Discrepancy Handling", "a": "Duplicate invoice, subtotal mismatch, or no lines to invoice → Close invoice in AX, select error in SharePoint, and reassign to POC ." },
-    { "q": "General Invoice Numbering", "a": "Format exactly as shown on invoice; remove spaces for 'Reliable' and remove asterisks (*) if applicable. No special characters/symbols allowed." }
-],
+        rules: [
+            { "q": "Scope Check", "a": "Only process PO/Job-related invoices. Non-PO invoices must be entered by local POC." },
+            { "q": "PO Status", "a": "If PO Approval Status is NOT CONFIRMED → Reassign. Do NOT reject in system." },
+            { "q": "Header Match", "a": "Vendor, Address, Inv #, Date, and Amount must match PDF. Any mismatch → Reassign." },
+            { "q": "Variance Rule", "a": "≤ $5 → Post with penny difference (40). > $5 → Reassign to Process Owner." },
+            { "q": "General Formatting", "a": "Remove spaces and special characters from invoice numbers to match ERP requirements." }
+        ],
         notes: [
             { "l": "Open Order", "t": "PO line not received – Open order" },
-            { "l": "Duplicate", "t": "Duplicate invoice—already invoiced in AX. Verified History." },
-            { "l": "Remit Err", "t": "Remit address mismatch—needs vendor update" },
-            { "l": "Tax Query", "t": "Job Tax Exempt" },
-            { "l": "Multiple Invoices", "t": "Multiple invoices in one PDF - Reassigned for splitting" },
-            { "l": "Freight", "t": "Freight charges exceed allowed limit" },
-            { "l": "No Receipt", "t": "Packing slip/Receipt not found in system" }
+            { "l": "Duplicate", "t": "Duplicate invoice—already processed in system. Verified History." },
+            { "l": "Remit Err", "t": "Remit address mismatch—needs vendor master update" },
+            { "l": "Tax Query", "t": "Job Tax Exempt - verification required" }
         ]
     };
 
@@ -79,12 +55,12 @@ rules: [
             <div id="ap-body" style="max-height: 620px; overflow-y: auto; padding: 15px; display: none;">
                 <div style="background: #f0f7ff; padding: 10px; border-radius: 6px; border: 1px solid #cce5ff; margin-bottom: 12px;">
                     <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 5px; font-size: 11px;">
-                        <span>Vendor Name:</span> <b id="res-vendor" class="click-val" style="color: #d13438; cursor: pointer;">---</b>
+                        <span>Vendor:</span> <b id="res-vendor" class="click-val" style="color: #d13438; cursor: pointer;">---</b>
                         <span>PO:</span> <b id="res-po" class="click-val" style="color: #d13438; cursor: pointer;">---</b>
                         <span>Inv #:</span> <b id="res-inv" class="click-val" style="color: #d13438; cursor: pointer;">---</b>
                         <span>Date:</span> <b id="res-date" class="click-val" style="color: #d13438; cursor: pointer;">---</b>
                         <span>Amt:</span> <b id="res-amt" class="click-val" style="color: #d13438; cursor: pointer;">---</b>
-<div id="credit-label" style="grid-column: span 2; color: #d13438; font-weight: bold; font-size: 10px; text-align: right; display: none; user-select: none;">⚠ CREDIT NOTE</div>
+                        <div id="credit-label" style="grid-column: span 2; color: #d13438; font-weight: bold; font-size: 10px; text-align: right; display: none;">⚠ CREDIT NOTE</div>
                     </div>
                     <button id="btn-fetch" style="width: 100%; margin-top: 8px; padding: 6px; background: #004a99; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px;">SCAN PROPERTIES</button>
                 </div>
@@ -97,12 +73,13 @@ rules: [
                 <div id="notes-area" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;"></div>
 
                 <div style="border-top: 1px solid #eee; padding-top: 8px; font-size: 9px; color: #aaa; text-align: center;">
-                    Created by Arunava Dey | APi GCC Bangalore
+                    Created by Arunava Dey | Process Automation
                 </div>
             </div>
         `;
         document.body.appendChild(container);
 
+        // --- SOP Search Logic ---
         const sopInput = document.getElementById('sop-search');
         const sopResults = document.getElementById('sop-results');
 
@@ -111,11 +88,9 @@ rules: [
             sopResults.innerHTML = "";
             if (query.length < 2) return;
 
-            const matches = KNOWLEDGE_BASE.rules.filter(r =>
+            KNOWLEDGE_BASE.rules.filter(r => 
                 r.q.toLowerCase().includes(query) || r.a.toLowerCase().includes(query)
-            );
-
-            matches.forEach(m => {
+            ).forEach(m => {
                 const div = document.createElement('div');
                 div.style = "background: #fff9c4; border-left: 3px solid #fbc02d; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 2px;";
                 div.innerHTML = `<strong>${m.q}:</strong> ${m.a}`;
@@ -123,66 +98,53 @@ rules: [
             });
         });
 
+        // --- Data Extraction Logic ---
         document.getElementById('btn-fetch').onclick = () => {
             const docs = [document];
             document.querySelectorAll('iframe').forEach(f => {
-                try { if(f.id !== 'search-frame') docs.push(f.contentDocument); } catch(e) {}
+                try { if(f.contentDocument) docs.push(f.contentDocument); } catch(e) {}
             });
 
             docs.forEach(d => {
                 if(!d) return;
 
-                const po = d.querySelector(`[aria-label*="PO Number"]`);
-if (po) {
-    let poValue = po.getAttribute('aria-label').split(',')[1]?.trim() || "";
+                // Extraction helper using optional chaining for safety
+                const getVal = (label) => d.querySelector(`[aria-label*="${label}"]`)?.getAttribute('aria-label')?.split(',')[1]?.trim() ?? "";
 
-    // Check if there is a hyphen (e.g., 1046-0105426)
-    if (poValue.includes('-')) {
-        poValue = poValue.split('-')[1]; // Take the part after the dash
-    }
-
-    // Prepend the asterisk as requested
-    document.getElementById('res-po').innerText = "*" + poValue;
-}
-
-                const inv = d.querySelector(`[aria-label*="Invoice Number"]`);
-                if(inv) document.getElementById('res-inv').innerText = inv.getAttribute('aria-label').split(',')[1]?.trim();
-
-                const dt = d.querySelector(`[aria-label*="Invoice Date"]`);
-                if(dt) document.getElementById('res-date').innerText = dt.getAttribute('aria-label').split(',')[1]?.trim().split(' ')[0];
-
-                const vendor = d.querySelector(`[aria-label*="Vendor Name"]`);
-                if(vendor) {
-                    const vendorValue = vendor.getAttribute('aria-label').split(',')[1]?.trim();
-                    const resVendor = document.getElementById('res-vendor');
-                    if(resVendor) resVendor.innerText = vendorValue;
+                const poValue = getVal("PO Number");
+                if (poValue) {
+                    const finalPo = poValue.includes('-') ? poValue.split('-')[1] : poValue;
+                    document.getElementById('res-po').innerText = "*" + finalPo;
                 }
 
-                const am = d.querySelector(`[aria-label*="Invoice Amount"]`);
-const creditLabel = document.getElementById('credit-label'); // Get the new label
+                const invValue = getVal("Invoice Number");
+                if (invValue) document.getElementById('res-inv').innerText = invValue;
 
-if (am) {
-    const label = am.getAttribute('aria-label');
-    const match = label.match(/Invoice Amount,\s*([-\d,.( )]+)/);
+                const dateValue = getVal("Invoice Date");
+                if (dateValue) document.getElementById('res-date').innerText = dateValue.split(' ')[0];
 
-    if (match && match[1]) {
-        let cleanAmt = match[1].trim().replace(/,$/, "");
-        const amtEl = document.getElementById('res-amt');
-        amtEl.innerText = cleanAmt;
+                const vendorValue = getVal("Vendor Name");
+                if (vendorValue) document.getElementById('res-vendor').innerText = vendorValue;
 
-        // Check for Negative/Credit
-        if (cleanAmt.includes('-') || cleanAmt.includes('(')) {
-            amtEl.style.color = "#d13438";
-            creditLabel.style.display = "block"; // Show the "Credit Note" text
-        } else {
-            amtEl.style.color = "#107c10";
-            creditLabel.style.display = "none";  // Hide it for normal invoices
-        }
-    }
-}
+                const amtValue = getVal("Invoice Amount");
+                const creditLabel = document.getElementById('credit-label');
+                if (amtValue) {
+                    let cleanAmt = amtValue.replace(/,$/, "");
+                    const amtEl = document.getElementById('res-amt');
+                    amtEl.innerText = cleanAmt;
+
+                    if (cleanAmt.includes('-') || cleanAmt.includes('(')) {
+                        amtEl.style.color = "#d13438";
+                        creditLabel.style.display = "block";
+                    } else {
+                        amtEl.style.color = "#107c10";
+                        creditLabel.style.display = "none";
+                    }
+                }
             });
         };
 
+        // --- UI Interactions ---
         let isDragging = false, offsetLeft = 0, offsetTop = 0;
         const header = document.getElementById('ap-header');
         header.addEventListener('mousedown', (e) => {
@@ -213,13 +175,22 @@ if (am) {
         KNOWLEDGE_BASE.notes.forEach(n => {
             const b = document.createElement('button');
             b.innerText = n.l; b.style = "padding: 5px; font-size: 10px; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;";
-            b.onclick = () => { navigator.clipboard.writeText(n.t); b.style.background = "#d4edda"; setTimeout(() => b.style.background = "white", 800); };
+            b.onclick = () => { 
+                navigator.clipboard.writeText(n.t); 
+                b.style.background = "#d4edda"; 
+                setTimeout(() => b.style.background = "white", 800); 
+            };
             nArea.appendChild(b);
         });
 
         document.querySelectorAll('.click-val').forEach(el => {
             el.addEventListener('click', () => {
-                if (el.innerText !== "---") { navigator.clipboard.writeText(el.innerText); el.style.color="#28a745"; setTimeout(()=>el.style.color="#d13438", 600); }
+                if (el.innerText !== "---") { 
+                    navigator.clipboard.writeText(el.innerText); 
+                    const oldColor = el.style.color;
+                    el.style.color="#28a745"; 
+                    setTimeout(()=>el.style.color=oldColor, 600); 
+                }
             });
         });
     }
