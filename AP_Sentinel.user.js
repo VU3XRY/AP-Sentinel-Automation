@@ -1,12 +1,11 @@
 // ==UserScript==
-// @name         AP Sentinel - Draggable v5.2.2
+// @name         AP Focus - Precision v5.2.2
 // @namespace    api.gcc.bangalore.arunava.dey
 // @version      5.2.2
-// @description  Now with JSON Search Bar + Fix for Amounts with commas.
+// @description  Automated Audit & Verification Engine for SharePoint/AX Workflows.
 // @author       Arunava Dey
 // @match        https://apigroupinc.sharepoint.com/*
 // @grant        none
-// @run-at       document-start
 // ==/UserScript==
 
 (function() {
